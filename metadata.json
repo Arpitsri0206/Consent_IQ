@@ -1,0 +1,6 @@
+{
+  "name": "ConsentIQ",
+  "description": "Multi-Tenant DPDP Consent & Digital Trust Management Platform for India",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
