@@ -1,6 +1,9 @@
 import React from 'react';
 import { useApp } from '../../services/store';
 import { StatCard } from '../../components/common/StatCard';
+import { DailyConsentApprovalRatesWidget } from '../../components/brand/DailyConsentApprovalRatesWidget';
+import { useCachedChartData } from '../../hooks/useCachedChartData';
+import { apiClient } from '../../services/api';
 import {
   Users,
   CheckCircle2,
@@ -14,7 +17,9 @@ import {
   TrendingUp,
   ShieldCheck,
   Building2,
-  ArrowRight
+  ArrowRight,
+  Zap,
+  RefreshCw
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -36,41 +41,69 @@ interface BrandDashboardViewProps {
   onNavigate: (route: string) => void;
 }
 
+// Fallback static metrics
+const DEFAULT_TREND_DATA = [
+  { month: 'Jan', granted: 120, withdrawn: 4 },
+  { month: 'Feb', granted: 145, withdrawn: 5 },
+  { month: 'Mar', granted: 170, withdrawn: 6 },
+  { month: 'Apr', granted: 210, withdrawn: 8 },
+  { month: 'May', granted: 240, withdrawn: 7 },
+  { month: 'Jun', granted: 290, withdrawn: 9 },
+  { month: 'Jul', granted: 330, withdrawn: 11 },
+  { month: 'Aug', granted: 380, withdrawn: 12 },
+  { month: 'Sep', granted: 420, withdrawn: 14 }
+];
+
+const DEFAULT_PURPOSE_DATA = [
+  { name: 'Marketing & Offers', value: 1820000, color: '#4f46e5' },
+  { name: 'Digital KYC & Ops', value: 2380000, color: '#06b6d4' },
+  { name: 'Fraud & Security', value: 2410000, color: '#10b981' },
+  { name: 'Analytics & Insights', value: 890000, color: '#f59e0b' }
+];
+
+const DEFAULT_CHANNEL_DATA = [
+  { channel: 'Web Portal', count: 1240000 },
+  { channel: 'Mobile App', count: 980000 },
+  { channel: 'QR Scan', count: 120000 },
+  { channel: 'API SDK', count: 70000 }
+];
+
+const fetchDashboardCharts = () => apiClient.getDashboardChartAnalytics();
+
 export const BrandDashboardView: React.FC<BrandDashboardViewProps> = ({ onNavigate }) => {
   const { organizations, consents, purposes, requests, t } = useApp();
+
+  // Cached Chart Data Hook - prevents re-fetching when navigating between views
+  const {
+    data: chartAnalytics,
+    isFromCache,
+    cacheMeta,
+    refetch,
+    loading: chartLoading
+  } = useCachedChartData(
+    'brand_dashboard_chart_analytics',
+    fetchDashboardCharts,
+    {
+      ttlMs: 5 * 60 * 1000, // 5 minutes TTL
+      initialData: {
+        generatedAt: 'static-init',
+        source: 'Client Pre-warm Cache',
+        monthlyTrend: DEFAULT_TREND_DATA,
+        purposeBreakdown: DEFAULT_PURPOSE_DATA,
+        channelBreakdown: DEFAULT_CHANNEL_DATA,
+        tenantVolumes: [],
+        totalActiveConsents: 0,
+      }
+    }
+  );
+
+  const trendData = chartAnalytics?.monthlyTrend || DEFAULT_TREND_DATA;
+  const purposeChartData = chartAnalytics?.purposeBreakdown || DEFAULT_PURPOSE_DATA;
+  const channelChartData = chartAnalytics?.channelBreakdown || DEFAULT_CHANNEL_DATA;
 
   const brandOrg = organizations.find(o => o.id === 'org_apex') || organizations[0];
   const brandConsents = consents.filter(c => c.tenantId === 'org_apex');
   const openRequests = requests.filter(r => r.tenantId === 'org_apex' && r.status !== 'RESOLVED');
-
-  // Chart Data: Monthly Consent Trend
-  const trendData = [
-    { month: 'Jan', granted: 120, withdrawn: 4 },
-    { month: 'Feb', granted: 145, withdrawn: 5 },
-    { month: 'Mar', granted: 170, withdrawn: 6 },
-    { month: 'Apr', granted: 210, withdrawn: 8 },
-    { month: 'May', granted: 240, withdrawn: 7 },
-    { month: 'Jun', granted: 290, withdrawn: 9 },
-    { month: 'Jul', granted: 330, withdrawn: 11 },
-    { month: 'Aug', granted: 380, withdrawn: 12 },
-    { month: 'Sep', granted: 420, withdrawn: 14 }
-  ];
-
-  // Chart Data: Purpose Breakdown
-  const purposeChartData = [
-    { name: 'Marketing & Offers', value: 1820000, color: '#4f46e5' },
-    { name: 'Digital KYC & Ops', value: 2380000, color: '#06b6d4' },
-    { name: 'Fraud & Security', value: 2410000, color: '#10b981' },
-    { name: 'Analytics & Insights', value: 890000, color: '#f59e0b' }
-  ];
-
-  // Chart Data: Channel Breakdown
-  const channelChartData = [
-    { channel: 'Web Portal', count: 1240000 },
-    { channel: 'Mobile App', count: 980000 },
-    { channel: 'QR Scan', count: 120000 },
-    { channel: 'API SDK', count: 70000 }
-  ];
 
   return (
     <div className="space-y-6">
@@ -177,6 +210,9 @@ export const BrandDashboardView: React.FC<BrandDashboardViewProps> = ({ onNaviga
         />
       </div>
 
+      {/* Recharts Daily Consent Approval Rates & Withdrawal Trends Widget */}
+      <DailyConsentApprovalRatesWidget />
+
       {/* Charts Grid: Consent Volume Analytics (Col 8) + Real-time Events (Col 4) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Consent Trend Chart (8 cols) */}
@@ -186,13 +222,29 @@ export const BrandDashboardView: React.FC<BrandDashboardViewProps> = ({ onNaviga
               <h3 className="font-bold text-slate-900 text-lg">Consent Volume Analytics</h3>
               <p className="text-xs text-slate-500">Aggregate new consent grants vs withdrawal revocations</p>
             </div>
-            <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-full">
-              <span className="px-3 py-1 bg-white text-indigo-600 text-xs font-bold rounded-full shadow-2xs">
-                Monthly
-              </span>
-              <span className="px-3 py-1 text-slate-500 text-xs font-semibold rounded-full hover:text-slate-900 cursor-pointer">
-                Weekly
-              </span>
+            <div className="flex items-center gap-2">
+              <div
+                title="Client-side chart cache active (5m TTL)"
+                className="hidden sm:inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-mono text-slate-600"
+              >
+                <Zap className="h-3 w-3 text-indigo-600" />
+                <span>{isFromCache ? '⚡ Cached (0ms)' : 'Live'}</span>
+              </div>
+              <button
+                onClick={() => refetch(true)}
+                title="Refresh chart analytics cache"
+                className="rounded-full p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
+              <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-full">
+                <span className="px-3 py-1 bg-white text-indigo-600 text-xs font-bold rounded-full shadow-2xs">
+                  Monthly
+                </span>
+                <span className="px-3 py-1 text-slate-500 text-xs font-semibold rounded-full hover:text-slate-900 cursor-pointer">
+                  Weekly
+                </span>
+              </div>
             </div>
           </div>
 

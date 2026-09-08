@@ -76,6 +76,12 @@ interface AppContextType {
     audience: string;
   }) => string;
 
+  createInventoryItem: (itemData: Omit<DataInventoryItem, 'id' | 'tenantId'>) => DataInventoryItem;
+  bulkImportInventory: (itemsData: Array<Omit<DataInventoryItem, 'id' | 'tenantId'> | Partial<DataInventoryItem>>, createAssociatedPurposes?: boolean) => {
+    importedCount: number;
+    newPurposesCount: number;
+  };
+
   submitDataPrincipalRequest: (requestData: {
     requestType: RequestType;
     organizationId: string;
@@ -432,6 +438,105 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     apiClient.createNotice(newNotice).catch((e) => console.warn('API create notice:', e));
   };
 
+  // 5b. Create RoPA Inventory Item
+  const createInventoryItem = (itemData: Omit<DataInventoryItem, 'id' | 'tenantId'>): DataInventoryItem => {
+    const newItem: DataInventoryItem = {
+      ...itemData,
+      id: `inv_apex_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      tenantId: 'org_apex',
+    };
+
+    setInventory((prev) => [newItem, ...prev]);
+    apiClient.createDataInventoryItem(newItem).catch((e) => console.warn('API create inventory item:', e));
+
+    return newItem;
+  };
+
+  // 5c. Bulk Import RoPA Inventory from CSV
+  const bulkImportInventory = (
+    itemsData: Array<Omit<DataInventoryItem, 'id' | 'tenantId'> | Partial<DataInventoryItem>>,
+    createAssociatedPurposes = true
+  ): { importedCount: number; newPurposesCount: number } => {
+    const timestamp = Date.now();
+    const newItems: DataInventoryItem[] = itemsData.map((item, idx) => {
+      const anyItem = item as Partial<DataInventoryItem>;
+      return {
+        id: anyItem.id || `inv_apex_${timestamp}_${idx + 1}`,
+        tenantId: anyItem.tenantId || 'org_apex',
+        dataCategory: (item.dataCategory as DataCategory) || 'Identity',
+        application: item.application || 'Core Banking & Digital Portal',
+        purpose: item.purpose || 'Statutory Compliance & Service Delivery',
+        retention: item.retention || '7 Years',
+        thirdParty: item.thirdParty || 'Internal / None',
+        legalBasis: (item.legalBasis as any) || 'Consent',
+        encryptionStatus: (item.encryptionStatus as any) || 'AES-256 GCM',
+        status: (item.status as any) || 'ACTIVE',
+      };
+    });
+
+    setInventory((prev) => [...newItems, ...prev]);
+
+    // Optional: Synchronize novel purposes found in the CSV into the brand's Purpose registry
+    let newPurposesCreated = 0;
+    if (createAssociatedPurposes) {
+      const existingPurposeNames = new Set(purposes.map((p) => p.name.toLowerCase().trim()));
+      const novelPurposesToCreate: Purpose[] = [];
+
+      for (const item of newItems) {
+        const pName = item.purpose.trim();
+        if (pName && !existingPurposeNames.has(pName.toLowerCase())) {
+          existingPurposeNames.add(pName.toLowerCase());
+          novelPurposesToCreate.push({
+            id: `purp_apex_csv_${Date.now()}_${novelPurposesToCreate.length + 1}`,
+            tenantId: 'org_apex',
+            name: pName,
+            description: `Processing activities for ${item.dataCategory} within ${item.application}.`,
+            businessObjective: item.application,
+            processingType: 'Service Delivery',
+            retentionPeriod: item.retention,
+            dataCategories: [item.dataCategory],
+            thirdParties: item.thirdParty !== 'Internal / None' && item.thirdParty !== 'None' ? [item.thirdParty] : [],
+            status: 'ACTIVE',
+            activeConsentsCount: 0,
+            createdAt: new Date().toISOString().split('T')[0],
+          });
+        }
+      }
+
+      if (novelPurposesToCreate.length > 0) {
+        setPurposes((prev) => [...novelPurposesToCreate, ...prev]);
+        newPurposesCreated = novelPurposesToCreate.length;
+        novelPurposesToCreate.forEach((np) => {
+          apiClient.createPurpose(np).catch((e) => console.warn('API sync CSV purpose:', e));
+        });
+      }
+    }
+
+    // Record Audit Log for RoPA bulk modification
+    const nowStr = getNowFormatted();
+    const auditLog: AuditEvent = {
+      id: generateId('AUD'),
+      timestamp: nowStr,
+      event: 'DATA_INVENTORY_BULK_IMPORTED',
+      actor: `${currentUser.name} (${currentUser.role})`,
+      organization: currentUser.orgName || 'Apex Financial Technologies',
+      resource: `RoPA Inventory (+${newItems.length} records)`,
+      ip: '10.240.12.8',
+      channel: 'Web',
+      result: 'SUCCESS',
+      hash: generateSyncHash(`AUDIT_ROPA_IMPORT_${timestamp}_${newItems.length}`),
+    };
+    setAuditLogs((prev) => [auditLog, ...prev]);
+
+    // Send bulk payload to PostgreSQL Cloud SQL backend
+    apiClient.bulkImportDataInventory(newItems).catch((e) => console.warn('API bulk import inventory:', e));
+
+    return {
+      importedCount: newItems.length,
+      newPurposesCount: newPurposesCreated,
+    };
+  };
+
   // 6. Create Consent Request Wizard
   const createConsentRequestWizard = (data: {
     purposeId: string;
@@ -669,6 +774,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createPurpose,
         createNotice,
         createConsentRequestWizard,
+        createInventoryItem,
+        bulkImportInventory,
         submitDataPrincipalRequest,
         resolveDataPrincipalRequest,
         createWebhook,

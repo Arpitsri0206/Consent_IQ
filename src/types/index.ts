@@ -22,7 +22,16 @@ export type ProcessingType =
   | 'Service Delivery'
   | 'Credit Assessment';
 
-export type CollectionChannel = 'Web' | 'Mobile App' | 'QR Code' | 'Email' | 'SMS' | 'API SDK';
+export type CollectionChannel = 
+  | 'WhatsApp'
+  | 'SMS'
+  | 'IVR'
+  | 'Web'
+  | 'Mobile App'
+  | 'QR Code'
+  | 'Email'
+  | 'Assisted / Branch'
+  | 'API SDK';
 
 export type RequestType = 
   | 'Access My Data'
@@ -257,4 +266,42 @@ export interface UserProfile {
   orgId?: string;
   orgName?: string;
   avatarUrl?: string;
+}
+
+export type NotificationDeliveryStatus = 
+  | 'QUEUED'
+  | 'DISPATCHED'
+  | 'DELIVERED'
+  | 'READ'
+  | 'CONSENT_GRANTED'
+  | 'CONSENT_DENIED'
+  | 'FAILED'
+  | 'TIMEOUT';
+
+export interface ChannelGatewaySetting {
+  channel: CollectionChannel;
+  enabled: boolean;
+  provider: string;
+  identifier: string; // e.g., DLT Header "VK-APEXBK" or WhatsApp WABA ID
+  webhookUrl: string;
+  autoRetry: boolean;
+  rateLimitPerSec: number;
+  deliverySuccessRate: number;
+}
+
+export interface ChannelNotificationLog {
+  id: string;
+  channel: CollectionChannel;
+  recipient: string;
+  recipientName?: string;
+  purposeId: string;
+  purposeName: string;
+  templateId?: string;
+  status: NotificationDeliveryStatus;
+  timestamp: string;
+  latencyMs: number;
+  evidenceHash: string;
+  messageContent: string;
+  responsePayload?: Record<string, any>;
+  errorMessage?: string;
 }

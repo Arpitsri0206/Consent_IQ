@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { useApp } from '../../services/store';
 import { StatCard } from '../../components/common/StatCard';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -13,8 +14,13 @@ import {
   Sparkles,
   AlertCircle,
   ExternalLink,
-  Lock
+  Lock,
+  QrCode,
+  ScanLine,
+  Camera,
+  Smartphone
 } from 'lucide-react';
+import { UserPrivacyPassModal } from '../../components/user/UserPrivacyPassModal';
 import confetti from 'canvas-confetti';
 
 interface UserDashboardViewProps {
@@ -31,6 +37,7 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
   onVerifyEvidence
 }) => {
   const { currentUser, consents, events, organizations, grantConsent, denyConsent, t } = useApp();
+  const [qrPassOpen, setQrPassOpen] = useState(false);
 
   const activeConsents = consents.filter(c => c.status === 'GRANTED');
   const pendingRequests = consents.filter(c => c.status === 'REQUESTED');
@@ -41,6 +48,8 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
     await grantConsent(id, 'Web');
     confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
   };
+
+  const passUrl = `https://consentiq.io/verify/pass/${currentUser.userRef}?id=${currentUser.id}`;
 
   return (
     <div className="space-y-6">
@@ -55,7 +64,14 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 font-mono text-xs text-slate-600 shadow-2xs">
+          <button
+            onClick={() => setQrPassOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-3.5 py-2 font-bold text-white shadow-2xs hover:bg-indigo-700 text-xs transition-colors"
+          >
+            <QrCode className="h-4 w-4" />
+            <span>My Privacy QR Pass</span>
+          </button>
+          <span className="rounded-xl border border-slate-200 bg-white px-3 py-2 font-mono text-xs text-slate-600 shadow-2xs">
             Principal ID: {currentUser.userRef}
           </span>
         </div>
@@ -220,6 +236,41 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
         </div>
       )}
 
+      {/* Privacy QR Passcard & In-Branch Consent Hub Card */}
+      <div className="rounded-2xl border border-indigo-100 bg-linear-to-r from-indigo-50/90 via-white to-blue-50/70 p-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="rounded-2xl bg-white p-2.5 shadow-sm border border-indigo-100 shrink-0 cursor-pointer hover:scale-105 transition-transform" onClick={() => setQrPassOpen(true)}>
+              <QRCodeSVG value={passUrl} size={72} level="M" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="rounded-md bg-indigo-600 text-white text-[10px] font-bold px-2 py-0.5 uppercase tracking-wide">
+                  DPDP Digital Passport
+                </span>
+                <span className="text-xs font-mono text-indigo-700 font-bold">USR-8F3A2</span>
+              </div>
+              <h3 className="font-extrabold text-slate-900 text-base sm:text-lg">
+                Personal Privacy QR Pass & In-Branch Scanner
+              </h3>
+              <p className="text-xs text-slate-600 max-w-xl">
+                Present your verified QR pass at bank desks, clinics, or telecom kiosks to instantly verify consent credentials or scan in-branch standees.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <button
+              onClick={() => setQrPassOpen(true)}
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-2xs hover:bg-indigo-700 transition-colors whitespace-nowrap"
+            >
+              <QrCode className="h-4 w-4" />
+              <span>Open My QR Pass</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Two Columns: Recent Consent Activity + Connected Brands */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Activity Timeline (2 Columns) */}
@@ -322,6 +373,13 @@ export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* User Digital Privacy Pass & In-Branch QR Modal */}
+      <UserPrivacyPassModal
+        isOpen={qrPassOpen}
+        onClose={() => setQrPassOpen(false)}
+        onOpenReceipt={onOpenReceipt}
+      />
     </div>
   );
 };

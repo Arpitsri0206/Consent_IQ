@@ -1,12 +1,16 @@
 import React from 'react';
 import { useApp } from '../../services/store';
 import { StatCard } from '../../components/common/StatCard';
-import { Building2, ShieldCheck, CheckCircle2, Users, Database, Zap, ArrowRight, Lock } from 'lucide-react';
+import { useCachedChartData } from '../../hooks/useCachedChartData';
+import { apiClient } from '../../services/api';
+import { Building2, ShieldCheck, CheckCircle2, Users, Database, Zap, ArrowRight, Lock, RefreshCw } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 interface AdminDashboardViewProps {
   onNavigate: (route: string) => void;
 }
+
+const fetchAdminDashboardCharts = () => apiClient.getDashboardChartAnalytics();
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onNavigate }) => {
   const { organizations, consents, events } = useApp();
@@ -15,11 +19,38 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onNaviga
   const totalConsents = organizations.reduce((acc, o) => acc + o.activeConsents, 0);
   const totalPrincipals = organizations.reduce((acc, o) => acc + o.dataPrincipalsCount, 0);
 
-  const tenantVolumeData = organizations.map(o => ({
+  const defaultTenantVolumeData = organizations.map(o => ({
     name: o.name.split(' ')[0],
     active: Number((o.activeConsents / 1000000).toFixed(2)),
     rate: o.consentRate
   }));
+
+  // Client-side cached chart data hook (5m TTL)
+  const {
+    data: chartAnalytics,
+    isFromCache,
+    refetch,
+    loading: chartLoading
+  } = useCachedChartData(
+    'admin_dashboard_charts_analytics',
+    fetchAdminDashboardCharts,
+    {
+      ttlMs: 5 * 60 * 1000,
+      initialData: {
+        generatedAt: 'static-init',
+        source: 'Client Cache',
+        monthlyTrend: [],
+        purposeBreakdown: [],
+        channelBreakdown: [],
+        tenantVolumes: defaultTenantVolumeData,
+        totalActiveConsents: totalConsents,
+      }
+    }
+  );
+
+  const tenantVolumeData = chartAnalytics?.tenantVolumes?.length
+    ? chartAnalytics.tenantVolumes
+    : defaultTenantVolumeData;
 
   return (
     <div className="space-y-6">
@@ -82,6 +113,22 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ onNaviga
           <div>
             <h3 className="font-bold text-slate-900 text-sm">Tenant Consent Volumes (Millions)</h3>
             <p className="text-xs text-slate-500">Distribution of active DPDP consents by registered fiduciary</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div
+              title="Client-side chart cache active (5m TTL)"
+              className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-mono text-slate-600"
+            >
+              <Zap className="h-3 w-3 text-indigo-600" />
+              <span>{isFromCache ? '⚡ Cached (0ms)' : 'Synced'}</span>
+            </div>
+            <button
+              onClick={() => refetch(true)}
+              title="Refresh chart analytics cache"
+              className="rounded-full p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
 

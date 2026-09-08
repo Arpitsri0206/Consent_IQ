@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { ConsentItem } from '../../types';
-import { X, Download, ShieldCheck, CheckCircle2, Copy, Check, Printer, FileText } from 'lucide-react';
+import { X, Download, ShieldCheck, CheckCircle2, Copy, Check, Printer, FileText, QrCode } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import confetti from 'canvas-confetti';
 
@@ -21,6 +22,8 @@ export const ConsentReceiptModal: React.FC<ConsentReceiptModalProps> = ({
 
   if (!consent) return null;
 
+  const verificationUrl = `https://consentiq.io/verify/consent/${consent.id}?hash=${consent.evidenceHash}&status=${consent.status}`;
+
   const copyReceiptDetails = () => {
     const text = `
 CONSENTIQ DPDP CONSENT RECEIPT
@@ -36,6 +39,7 @@ Expires At: ${consent.expiresAt || 'N/A'}
 Notice Version: ${consent.noticeVersion}
 Collection Channel: ${consent.collectionChannel}
 Cryptographic SHA-256 Stamp: ${consent.evidenceHash}
+Verify URL: ${verificationUrl}
 ==============================================
 Governed under the Digital Personal Data Protection Act, 2023 (India)
 `.trim();
@@ -67,6 +71,7 @@ Governed under the Digital Personal Data Protection Act, 2023 (India)
         `Granted: ${consent.grantedAt}\n` +
         `Notice: ${consent.noticeVersion}\n` +
         `Ledger Hash: ${consent.evidenceHash}\n` +
+        `Verification URL: ${verificationUrl}\n` +
         `Verification Status: CRYPTOGRAPHICALLY VALID (DPDP COMPLIANT)`
       ], { type: 'text/plain;charset=utf-8' });
       element.href = URL.createObjectURL(file);
@@ -106,7 +111,7 @@ Governed under the Digital Personal Data Protection Act, 2023 (India)
         <div ref={printRef} className="p-6 md:p-8 space-y-6">
           {/* Watermark Banner */}
           <div className="rounded-xl border border-indigo-100 bg-linear-to-r from-indigo-50/70 to-blue-50/70 p-4">
-            <div className="flex items-start justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div>
                 <span className="text-xs font-bold uppercase tracking-widest text-indigo-700">
                   ConsentIQ Verified Receipt
@@ -115,9 +120,19 @@ Governed under the Digital Personal Data Protection Act, 2023 (India)
                   <span className="text-lg font-bold text-slate-900 font-mono">{consent.id}</span>
                   <StatusBadge status={consent.status} size="sm" />
                 </div>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Scan the embedded QR code with any camera to verify DPDP ledger validity.
+                </p>
               </div>
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-indigo-200 bg-white shadow-xs font-mono text-xs font-bold text-indigo-800">
-                QR-OK
+              <div className="rounded-xl border border-indigo-200 bg-white p-2 shadow-xs shrink-0 text-center">
+                <QRCodeSVG
+                  value={verificationUrl}
+                  size={64}
+                  level="M"
+                />
+                <span className="block mt-0.5 font-mono text-[8px] font-bold text-indigo-700 uppercase">
+                  Scan Proof
+                </span>
               </div>
             </div>
           </div>

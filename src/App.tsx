@@ -26,6 +26,7 @@ import { BrandIntegrationsView } from './views/brand/BrandIntegrationsView';
 import { BrandWebhooksView } from './views/brand/BrandWebhooksView';
 import { BrandAuditView } from './views/brand/BrandAuditView';
 import { BrandEvidenceView } from './views/brand/BrandEvidenceView';
+import { BrandReportsView } from './views/brand/BrandReportsView';
 import { BrandSettingsView } from './views/brand/BrandSettingsView';
 
 // Admin Views
@@ -98,6 +99,8 @@ const AppContent: React.FC = () => {
             return <DataSharingVisualMap />;
           case '/user/requests':
             return <UserRequestsView />;
+          case '/user/reports':
+            return <BrandReportsView onNavigate={navigateTo} />;
 
           // Brand Admin Routes
           case '/brand/dashboard':
@@ -138,6 +141,8 @@ const AppContent: React.FC = () => {
                 onVerifyEvidence={id => setEvidenceConsentId(id)}
               />
             );
+          case '/brand/reports':
+            return <BrandReportsView onNavigate={navigateTo} />;
           case '/brand/settings':
             return <BrandSettingsView />;
 
@@ -154,6 +159,8 @@ const AppContent: React.FC = () => {
                 onVerifyEvidence={id => setEvidenceConsentId(id)}
               />
             );
+          case '/admin/reports':
+            return <BrandReportsView onNavigate={navigateTo} />;
 
           default:
             return (
@@ -171,13 +178,14 @@ const AppContent: React.FC = () => {
       {activeReceiptConsent && (
         <ConsentReceiptModal
           consent={activeReceiptConsent}
-          isOpen={!!receiptConsentId}
           onClose={() => setReceiptConsentId(null)}
+          onVerifyEvidence={id => setEvidenceConsentId(id)}
         />
       )}
 
-      {activeEvidenceConsent && (
+      {evidenceConsentId && (
         <EvidenceModal
+          consentId={evidenceConsentId}
           consent={activeEvidenceConsent}
           isOpen={!!evidenceConsentId}
           onClose={() => setEvidenceConsentId(null)}

@@ -27,9 +27,12 @@ import {
   X,
   Sparkles,
   RotateCcw,
-  ExternalLink
+  ExternalLink,
+  FileSpreadsheet,
+  QrCode,
 } from 'lucide-react';
 import { CommandPalette } from '../common/CommandPalette';
+import { UserPrivacyPassModal } from '../user/UserPrivacyPassModal';
 
 interface AppShellProps {
   currentRoute: string;
@@ -57,6 +60,7 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [qrPassOpen, setQrPassOpen] = useState(false);
 
   const unreadCount = notifications.filter(n => !n.read && n.targetRole === currentRole).length;
 
@@ -65,6 +69,8 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
     DATA_PRINCIPAL: [
       { id: '/user/dashboard', label: t.navDashboard, icon: LayoutDashboard },
       { id: '/user/consents', label: t.navConsents, icon: CheckSquare, badge: '1' },
+      { id: '/user/reports', label: t.navReports || 'Reports & CSV Exports', icon: FileSpreadsheet, badge: 'CSV' },
+      { id: 'ACTION_QR_PASS', label: 'My Privacy QR Pass', icon: QrCode, isAction: true },
       { id: '/user/history', label: t.navHistory, icon: History },
       { id: '/user/data-sharing', label: t.navDataSharing, icon: Share2 },
       { id: '/user/requests', label: t.navRequests, icon: FileQuestion }
@@ -73,6 +79,7 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
       { id: '/brand/dashboard', label: t.navDashboard, icon: LayoutDashboard },
       { id: '/brand/consents', label: t.navConsentRegistry, icon: CheckSquare },
       { id: '/brand/consents/create', label: t.navCreateConsent, icon: Sparkles, highlight: true },
+      { id: '/brand/reports', label: t.navReports || 'Reports & CSV Exports', icon: FileSpreadsheet, badge: 'CSV' },
       { id: '/brand/purposes', label: t.navPurposes, icon: Layers },
       { id: '/brand/notices', label: t.navNotices, icon: FileText },
       { id: '/brand/data-inventory', label: t.navDataInventory, icon: Database },
@@ -86,6 +93,7 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
     ],
     PLATFORM_ADMIN: [
       { id: '/admin/dashboard', label: t.navDashboard, icon: LayoutDashboard },
+      { id: '/admin/reports', label: t.navReports || 'Reports & CSV Exports', icon: FileSpreadsheet, badge: 'CSV' },
       { id: '/admin/organizations', label: t.navOrganizations, icon: Building2 },
       { id: '/admin/security', label: t.navSecurity, icon: Lock },
       { id: '/admin/audit', label: t.navAudit, icon: FileCheck }
@@ -121,10 +129,10 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar - Desktop (Sleek Interface Deep Slate Navy) */}
-        <aside className="hidden lg:flex w-64 flex-col shrink-0 bg-[#0f172a] text-slate-300 select-none">
-          <div className="p-6">
+        <aside className="hidden lg:flex w-64 flex-col shrink-0 bg-[#0f172a] text-slate-300 select-none h-full overflow-hidden">
+          <div className="p-5 flex-1 overflow-y-auto space-y-4">
             {/* Logo & Brand */}
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-4">
               <div className="w-9 h-9 bg-indigo-500 rounded-xl flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
                 <ShieldCheck className="w-5 h-5" />
               </div>
@@ -140,7 +148,7 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
             </div>
 
             {/* Persona Switcher inside Dark Sidebar */}
-            <div className="mb-6 rounded-xl bg-slate-800/60 p-1 border border-slate-700/50">
+            <div className="mb-4 rounded-xl bg-slate-800/60 p-1 border border-slate-700/50">
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 flex items-center justify-between">
                 <span>Active Role</span>
                 <span className="text-indigo-400 font-mono text-[9px]">LIVE</span>
@@ -196,21 +204,31 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
                 return (
                   <button
                     key={item.id}
-                    onClick={() => onNavigate(item.id)}
+                    onClick={() => {
+                      if (item.id === 'ACTION_QR_PASS') {
+                        setQrPassOpen(true);
+                      } else {
+                        onNavigate(item.id);
+                      }
+                    }}
                     className={`w-full flex items-center justify-between rounded-lg px-3.5 py-2.5 transition-all text-left ${
                       isActive
                         ? 'bg-white/10 text-white font-semibold'
                         : item.highlight
                         ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30'
+                        : item.id === 'ACTION_QR_PASS'
+                        ? 'bg-indigo-600/30 text-indigo-200 border border-indigo-500/30 hover:bg-indigo-600/50'
                         : 'text-slate-400 hover:text-white hover:bg-white/5'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-400' : 'opacity-70'}`} />
+                      <Icon className={`w-4 h-4 ${isActive || item.id === 'ACTION_QR_PASS' ? 'text-indigo-400' : 'opacity-70'}`} />
                       <span className="text-xs">{item.label}</span>
                     </div>
                     {item.badge && !isActive && (
-                      <span className="rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-bold text-white animate-pulse">
+                      <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold text-white ${
+                        item.badge === 'CSV' ? 'bg-emerald-600' : 'bg-amber-500 animate-pulse'
+                      }`}>
                         {item.badge}
                       </span>
                     )}
@@ -314,8 +332,13 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
                     <button
                       key={item.id}
                       onClick={() => {
-                        onNavigate(item.id);
-                        setMobileMenuOpen(false);
+                        if (item.id === 'ACTION_QR_PASS') {
+                          setQrPassOpen(true);
+                          setMobileMenuOpen(false);
+                        } else {
+                          onNavigate(item.id);
+                          setMobileMenuOpen(false);
+                        }
                       }}
                       className={`w-full flex items-center gap-3 rounded-lg px-3.5 py-2.5 ${
                         isActive ? 'bg-white/10 text-white font-bold' : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -357,8 +380,19 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
               </button>
             </div>
 
-            {/* Right: Language switch, Notification bell, Divider, User Profile */}
-            <div className="flex items-center gap-3 sm:gap-4">
+            {/* Right: QR Pass button (User mode), Language switch, Notification bell, Divider, User Profile */}
+            <div className="flex items-center gap-2.5 sm:gap-4">
+              {/* QR Privacy Pass Button for Data Principal */}
+              {currentRole === 'DATA_PRINCIPAL' && (
+                <button
+                  onClick={() => setQrPassOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-200 bg-indigo-50/90 px-3 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-all shadow-2xs"
+                >
+                  <QrCode className="h-3.5 w-3.5 text-indigo-600" />
+                  <span>My QR Pass</span>
+                </button>
+              )}
+
               {/* Language Switcher */}
               <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 p-0.5 text-[11px] font-semibold">
                 <button
@@ -464,6 +498,12 @@ export const AppShell: React.FC<AppShellProps> = ({ currentRoute, onNavigate, ch
           </main>
         </div>
       </div>
+
+      {/* User Digital Privacy Pass & In-Branch QR Modal */}
+      <UserPrivacyPassModal
+        isOpen={qrPassOpen}
+        onClose={() => setQrPassOpen(false)}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../services/store';
-import { Search, Shield, Building2, Target, FileText, ArrowRight, X, Clock, HelpCircle } from 'lucide-react';
+import { Search, Shield, Building2, Target, FileText, ArrowRight, X, Clock, HelpCircle, FileSpreadsheet } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 
 interface CommandPaletteProps {
@@ -75,6 +75,38 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
         {/* Results List */}
         <div className="max-h-[60vh] overflow-y-auto p-3 space-y-4 text-xs">
+          {/* Quick Action for Reports & Exports */}
+          {(!query || 'reports csv export download inventory ledger'.includes(query.toLowerCase())) && (
+            <div>
+              <span className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Quick Actions
+              </span>
+              <div className="mt-1 space-y-1">
+                <div
+                  onClick={() => {
+                    if (onNavigate) onNavigate('/brand/reports');
+                    onClose();
+                  }}
+                  className="flex items-center justify-between rounded-lg p-2 bg-indigo-50/50 hover:bg-indigo-50 border border-indigo-100/60 cursor-pointer transition-colors"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100 text-emerald-700 font-bold">
+                      <FileSpreadsheet className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <span>Reports & CSV Export Center</span>
+                        <span className="rounded bg-indigo-100 text-indigo-700 text-[10px] font-bold px-1.5 py-0.2">New</span>
+                      </div>
+                      <span className="text-slate-500 text-[11px]">Download formatted CSVs for Consents, RoPA Inventory, DSRs, and Audit Logs</span>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-indigo-600" />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Consents */}
           {filteredConsents.length > 0 && (
             <div>

@@ -13,8 +13,10 @@ import {
   X,
   CheckCircle2,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  QrCode
 } from 'lucide-react';
+import { UserPrivacyPassModal } from '../../components/user/UserPrivacyPassModal';
 import confetti from 'canvas-confetti';
 
 interface UserConsentsViewProps {
@@ -34,6 +36,7 @@ export const UserConsentsView: React.FC<UserConsentsViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('ALL');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [qrPassOpen, setQrPassOpen] = useState(false);
 
   // Modal states
   const [inspectingConsent, setInspectingConsent] = useState<ConsentItem | null>(null);
@@ -86,6 +89,13 @@ export const UserConsentsView: React.FC<UserConsentsViewProps> = ({
             View, inspect, verify, and withdraw consents given to authorized Data Fiduciaries under the DPDP Act.
           </p>
         </div>
+        <button
+          onClick={() => setQrPassOpen(true)}
+          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-bold text-white shadow-2xs hover:bg-indigo-700 transition-colors"
+        >
+          <QrCode className="h-4 w-4" />
+          <span>My Privacy QR Pass</span>
+        </button>
       </div>
 
       {/* Tabs */}
@@ -510,6 +520,13 @@ export const UserConsentsView: React.FC<UserConsentsViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* User Digital Privacy Pass & In-Branch QR Modal */}
+      <UserPrivacyPassModal
+        isOpen={qrPassOpen}
+        onClose={() => setQrPassOpen(false)}
+        onOpenReceipt={onOpenReceipt}
+      />
     </div>
   );
 };

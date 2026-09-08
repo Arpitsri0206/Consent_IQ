@@ -145,6 +145,20 @@ export const apiClient = {
     return fetchJson<DataInventoryItem[]>('/inventory');
   },
 
+  async createDataInventoryItem(item: Partial<DataInventoryItem>): Promise<DataInventoryItem> {
+    return fetchJson<DataInventoryItem>('/inventory', {
+      method: 'POST',
+      body: JSON.stringify(item),
+    });
+  },
+
+  async bulkImportDataInventory(items: Partial<DataInventoryItem>[]): Promise<{ count: number; items: DataInventoryItem[] }> {
+    return fetchJson<{ count: number; items: DataInventoryItem[] }>('/inventory/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+  },
+
   async getDataSharingGraph(): Promise<DataSharingNode[]> {
     return fetchJson<DataSharingNode[]>('/sharing');
   },
@@ -175,6 +189,13 @@ export const apiClient = {
     return fetchJson<AuditEvent[]>('/audit');
   },
 
+  async verifyLedgerHash(hashOrId: string): Promise<any> {
+    return fetchJson<any>('/ledger/verify-hash', {
+      method: 'POST',
+      body: JSON.stringify({ hashOrId }),
+    });
+  },
+
   async getNotifications(): Promise<AppNotification[]> {
     return fetchJson<AppNotification[]>('/notifications');
   },
@@ -183,5 +204,17 @@ export const apiClient = {
     return fetchJson<AppNotification>(`/notifications/${id}/read`, {
       method: 'PUT',
     });
+  },
+
+  async getDashboardChartAnalytics(): Promise<{
+    generatedAt: string;
+    source: string;
+    monthlyTrend: Array<{ month: string; granted: number; withdrawn: number }>;
+    purposeBreakdown: Array<{ name: string; value: number; color: string }>;
+    channelBreakdown: Array<{ channel: string; count: number }>;
+    tenantVolumes: Array<{ name: string; active: number; rate: string }>;
+    totalActiveConsents: number;
+  }> {
+    return fetchJson('/analytics/dashboard-charts');
   },
 };

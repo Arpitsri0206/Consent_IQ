@@ -1,14 +1,99 @@
 import React, { useState } from 'react';
 import { useApp } from '../../services/store';
-import { ConsentStatus } from '../../types';
+import { ConsentStatus, CollectionChannel } from '../../types';
 import { StatusBadge } from '../../components/common/StatusBadge';
-import { Search, Filter, ShieldCheck, Download, ExternalLink, Sparkles } from 'lucide-react';
+import {
+  Search,
+  Filter,
+  ShieldCheck,
+  Download,
+  ExternalLink,
+  Sparkles,
+  MessageCircle,
+  MessageSquare,
+  PhoneCall,
+  Globe,
+  Smartphone,
+  QrCode,
+  Mail,
+  Building2,
+  Cpu
+} from 'lucide-react';
 
 interface BrandConsentsViewProps {
   onOpenReceipt: (consentId: string) => void;
   onVerifyEvidence: (consentId: string) => void;
   onNavigate: (route: string) => void;
 }
+
+const renderChannelBadge = (ch: CollectionChannel) => {
+  switch (ch) {
+    case 'WhatsApp':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+          <MessageCircle className="h-3 w-3" />
+          WhatsApp
+        </span>
+      );
+    case 'SMS':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-200">
+          <MessageSquare className="h-3 w-3" />
+          SMS
+        </span>
+      );
+    case 'IVR':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-purple-50 px-2 py-0.5 text-[10px] font-bold text-purple-700 border border-purple-200">
+          <PhoneCall className="h-3 w-3" />
+          IVR Voice
+        </span>
+      );
+    case 'Mobile App':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-700 border border-sky-200">
+          <Smartphone className="h-3 w-3" />
+          Mobile App
+        </span>
+      );
+    case 'Web':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-700 border border-indigo-200">
+          <Globe className="h-3 w-3" />
+          Web
+        </span>
+      );
+    case 'QR Code':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 border border-amber-200">
+          <QrCode className="h-3 w-3" />
+          QR Code
+        </span>
+      );
+    case 'Email':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700 border border-rose-200">
+          <Mail className="h-3 w-3" />
+          Email
+        </span>
+      );
+    case 'Assisted / Branch':
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-teal-50 px-2 py-0.5 text-[10px] font-bold text-teal-700 border border-teal-200">
+          <Building2 className="h-3 w-3" />
+          Branch Kiosk
+        </span>
+      );
+    case 'API SDK':
+    default:
+      return (
+        <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-700 border border-slate-200">
+          <Cpu className="h-3 w-3" />
+          API SDK
+        </span>
+      );
+  }
+};
 
 export const BrandConsentsView: React.FC<BrandConsentsViewProps> = ({
   onOpenReceipt,
@@ -17,6 +102,7 @@ export const BrandConsentsView: React.FC<BrandConsentsViewProps> = ({
 }) => {
   const { consents } = useApp();
   const [tab, setTab] = useState<'ALL' | ConsentStatus>('ALL');
+  const [channelFilter, setChannelFilter] = useState<'ALL' | CollectionChannel>('ALL');
   const [search, setSearch] = useState('');
 
   // Filter for brand
@@ -24,12 +110,14 @@ export const BrandConsentsView: React.FC<BrandConsentsViewProps> = ({
 
   const filtered = brandConsents.filter(c => {
     const matchesTab = tab === 'ALL' || c.status === tab;
+    const matchesChannel = channelFilter === 'ALL' || c.collectionChannel === channelFilter;
     const matchesSearch =
       c.id.toLowerCase().includes(search.toLowerCase()) ||
       c.userRef.toLowerCase().includes(search.toLowerCase()) ||
       c.purposeName.toLowerCase().includes(search.toLowerCase()) ||
+      c.collectionChannel.toLowerCase().includes(search.toLowerCase()) ||
       c.noticeVersion.toLowerCase().includes(search.toLowerCase());
-    return matchesTab && matchesSearch;
+    return matchesTab && matchesChannel && matchesSearch;
   });
 
   return (
@@ -81,16 +169,47 @@ export const BrandConsentsView: React.FC<BrandConsentsViewProps> = ({
         })}
       </div>
 
-      {/* Search Filter */}
-      <div className="flex items-center rounded-2xl border border-slate-200 bg-white p-3 shadow-2xs">
-        <Search className="h-4 w-4 text-slate-400 ml-2" />
-        <input
-          type="text"
-          placeholder="Search by Consent ID, Data Principal Pseudonym (USR-...), Purpose or Notice..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full bg-transparent px-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden"
-        />
+      {/* Search & Channel Filters */}
+      <div className="space-y-3">
+        <div className="flex items-center rounded-2xl border border-slate-200 bg-white p-3 shadow-2xs">
+          <Search className="h-4 w-4 text-slate-400 ml-2" />
+          <input
+            type="text"
+            placeholder="Search by Consent ID, Data Principal Ref (USR-...), Purpose, Channel, or Notice..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full bg-transparent px-3 text-xs text-slate-900 placeholder-slate-400 focus:outline-hidden"
+          />
+        </div>
+
+        {/* Channel Filter Chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-medium text-slate-600">
+          <span className="text-slate-400 text-xs font-semibold px-1 shrink-0">Channel:</span>
+          {(['ALL', 'WhatsApp', 'SMS', 'IVR', 'Mobile App', 'Web', 'QR Code', 'Email', 'Assisted / Branch'] as const).map(ch => {
+            const isSelected = channelFilter === ch;
+            const count = ch === 'ALL' ? brandConsents.length : brandConsents.filter(c => c.collectionChannel === ch).length;
+            return (
+              <button
+                key={ch}
+                onClick={() => setChannelFilter(ch)}
+                className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 transition-all whitespace-nowrap ${
+                  isSelected
+                    ? 'bg-slate-900 text-white font-bold shadow-2xs'
+                    : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                <span>{ch === 'ALL' ? 'All Channels' : ch}</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.2 text-[9px] font-bold ${
+                    isSelected ? 'bg-slate-700 text-slate-200' : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Table */}
@@ -130,8 +249,8 @@ export const BrandConsentsView: React.FC<BrandConsentsViewProps> = ({
                   <td className="py-4 px-4 text-slate-600 whitespace-nowrap">
                     {c.grantedAt ? c.grantedAt.split(' ')[0] : '—'}
                   </td>
-                  <td className="py-4 px-4 text-slate-600 font-mono">
-                    {c.collectionChannel}
+                  <td className="py-4 px-4">
+                    {renderChannelBadge(c.collectionChannel)}
                   </td>
                   <td className="py-4 px-4 text-right whitespace-nowrap font-sans">
                     <div className="flex items-center justify-end gap-2">
